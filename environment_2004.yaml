@@ -1,8 +1,10 @@
 name: sap
 channels:
+  - anaconda
   - conda-forge
   - pytorch
   - pytorch3d
+  - default
 dependencies:
   - python=3.8
   - pytorch=1.9.0
