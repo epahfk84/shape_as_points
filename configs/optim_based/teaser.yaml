@@ -1,7 +1,7 @@
 data:
   class: 'only_pcl'
   data_type: point
-  data_path: 'data/demo/wheel.obj'
+  data_path: 'data/demo/wheel.ply'
   object_id: 0
   num_points: 20000
 model:
@@ -29,7 +29,7 @@ train:
   save_every: 100
   exp_pcl: True
   exp_mesh: True
-  o3d_show: False
+  o3d_show: True
   o3d_vis_pcl: True
   o3d_window_size: 540
   vis_rendering: False
