@@ -3,23 +3,20 @@ channels:
   - anaconda
   - conda-forge
   - pytorch
-  - pytorch3d
-  - default
+  - defaults
 dependencies:
   - python=3.8
   - pytorch=1.9.0
   - torchvision=0.10.0
-  - cudatoolkit=11.1
+  - cudatoolkit=10.2
   - numpy=1.18.1
   - matplotlib=3.4.3
-  - pyyaml=6.0.0
+  - pyyaml=5.3.1
   - scipy=1.4.1
   - tqdm=4.54.0
   - trimesh=3.8.14
   - igl=2.2.1
   - tensorboard=2.6.0
-  - pytorch3d=0.6.1=py38_cu111_pyt190
-  - fvcore
   - pip
   - pip:
     - plyfile==0.7
