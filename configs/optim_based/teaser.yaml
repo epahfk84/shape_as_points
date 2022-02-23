@@ -1,13 +1,13 @@
 data:
   class: 'only_pcl'
   data_type: point
-  data_path: 'data/demo/wheel.ply'
+  data_path: 'data/demo/octocat_noisy.ply'
   object_id: 0
   num_points: 20000
 model:
   sphere_radius: 0.2
-  grid_res: 128 # poisson grid resolution
-  psr_sigma: 2
+  grid_res: 256 # poisson grid resolution
+  psr_sigma: 1
 train:
   schedule:
     pcl:

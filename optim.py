@@ -132,8 +132,8 @@ def main():
         pts_gt, norms_gt = sample_points_from_meshes(data['gt_mesh'], 
                                     num_samples=500000, return_normals=True)
         pts_gt = (pts_gt + 1) / 2
-        from src.dpsr import DPSR
-        dpsr_tmp = DPSR(res=(cfg['model']['grid_res'], 
+        from src.dpsr import DPSR, DFTPSR
+        dpsr_tmp = DFTPSR((cfg['model']['grid_res'],
                             cfg['model']['grid_res'], 
                             cfg['model']['grid_res']), 
                         sig=cfg['model']['psr_sigma']).to(device)

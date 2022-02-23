@@ -8,6 +8,7 @@ import torch.nn as nn
 from src.network import encoder_dict, decoder_dict
 from src.network.utils import map2local
 
+
 class PSR2Mesh(torch.autograd.Function):
     @staticmethod
     def forward(ctx, psr_grid):

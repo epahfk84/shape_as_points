@@ -10,7 +10,8 @@ import torch.fft
 
 
 in_pc_file = 'data/demo/wheel.ply'
-out_mesh_file = 'out.ply'
+# in_pc_file = 'data/demo/octocat_noisy.ply'
+out_mesh_file = 'out2.ply'
 
 
 class DPSR(nn.Module):
@@ -72,7 +73,7 @@ class DPSR(nn.Module):
 
             if self.scale:
                 phi = -phi / torch.abs(fv0.view(*tuple([-1] + [1] * self.dim))) * 0.5
-        return phi
+        return -phi
 
 
 class DPSR2(nn.Module):
@@ -161,7 +162,8 @@ class DPSR2(nn.Module):
         self.k_over_N_grid = torch.from_numpy(np.array(np.meshgrid(*k_over_N)))
         # self.k_over_N_grid.shape = [3, 64, 64, 33]
 
-        self.k_over_N_grid = self.k_over_N_grid.permute(*tuple(list(range(1, self.dim+1))+[0]))
+        self.k_over_N_grid = self.k_over_N_grid.permute((2, 1) + tuple(range(3, self.dim+1)) + (0,))
+        # self.k_over_N_grid = self.k_over_N_grid.permute(*tuple(list(range(1, self.dim+1))+[0]))
         # self.k_over_N_grid.shape = [64, 64, 33, 3]
 
         #### Divergence ####
@@ -184,10 +186,12 @@ class DPSR2(nn.Module):
 
         Div_Op = torch.view_as_complex(torch.stack([Div_Op_R, Div_Op_I], dim=-1))
         # Div_Op.shape: [64, 64, 33, 3]
+        # Div_Op = Div_Op.permute(1, 0, 2, 3)
 
         # N_.shape: [1, 64, 64, 33, 3]
         DivN_d = torch.view_as_real(torch.sum(Div_Op * N_, dim=-1))
         # DivN.shape: [1, 64, 64, 33, 2]
+        # print(torch.view_as_complex(DivN_d).squeeze(0))
 
 
         #### Laplacian ####
@@ -203,9 +207,10 @@ class DPSR2(nn.Module):
 
 
         #### Choose one of the followings:
-        Phi = DivN_d / (Lap_d+1e-6) # [b, dim0, dim1, dim2/2+1, 2]
+        # Phi = DivN_d / (Lap_d+1e-6) # [b, dim0, dim1, dim2/2+1, 2]
         # Phi = DivN_c / (Lap_c+1e-6) # [b, dim0, dim1, dim2/2+1, 2]
         # Phi = DivN_c / (Lap_d+1e-6) # [b, dim0, dim1, dim2/2+1, 2]
+        Phi = DivN_d / (Lap_c+1e-6) # [b, dim0, dim1, dim2/2+1, 2]
         # Phi: [1, 64, 64, 33, 2]
 
         # [1, 2, 3, 4, 0] with dim=3.
@@ -257,8 +262,6 @@ if __name__ == "__main__":
     N = np.asarray(pcd.normals)
     P = np.expand_dims(P, 0)
     N = np.expand_dims(N, 0)
-    print(np.shape(P))
-    print(np.shape(N))
 
     # Normalize the input point cloud to the range of [0, 1].
     P_min, P_max = np.amin(P), np.amax(P)
@@ -269,7 +272,7 @@ if __name__ == "__main__":
     P = torch.from_numpy(P)
     N = torch.from_numpy(N)
 
-    res = 128
+    res = 32
     dpsr = DPSR2(res=(res, res, res), scale=False, shift=False)
     phi = dpsr(P, N)
     implicit_to_mesh(phi, out_mesh_file)

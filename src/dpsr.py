@@ -1,9 +1,9 @@
-
 import torch
 import torch.nn as nn
 from src.utils import spec_gaussian_filter, fftfreqs, img, grid_interp, point_rasterize
 import numpy as np
 import torch.fft
+
 
 class DPSR(nn.Module):
     def __init__(self, res, sig=10, scale=True, shift=True):
@@ -64,3 +64,49 @@ class DPSR(nn.Module):
             if self.scale:
                 phi = -phi / torch.abs(fv0.view(*tuple([-1]+[1] * self.dim))) *0.5
         return phi
+
+
+def freq_tensor(shape):
+    dim = len(shape)
+    w_shape = shape[:-1] + (shape[-1] // 2 + 1,) + (dim,)
+    w = torch.cartesian_prod(*[torch.fft.fftfreq(shape[idx], dtype=torch.double) if idx != dim - 1 else
+                               torch.fft.rfftfreq(shape[idx], dtype=torch.double)
+                               for idx in range(dim)]).reshape(w_shape)
+    return w
+
+
+def div_op(shape, spacings):
+    import math
+    sin_w = torch.sin(2 * math.pi * freq_tensor(shape)) / spacings
+    return torch.complex(torch.zeros_like(sin_w), sin_w)
+
+
+def ilap_op(shape, spacings):
+    import math
+    cos_w = torch.cos(2 * math.pi * freq_tensor(shape))
+    ilap = torch.reciprocal(torch.sum(2 * (cos_w - 1) / (spacings ** 2), dim=-1))
+    ilap[(0,) * len(ilap.shape)] = 0
+    return ilap
+
+
+class DFTPSR(nn.Module):
+    def __init__(self, shape, sig, device="cuda"):
+        super(DFTPSR, self).__init__()
+        self.shape = shape
+        self.fft_dims = tuple(range(1, len(self.shape) + 1))
+        spacings = tuple([1 / res for res in shape])
+        spacings = torch.tensor(spacings, dtype=torch.double)
+        self.div = div_op(self.shape, spacings).to(device)
+        self.ilap = ilap_op(self.shape, spacings).to(device)
+
+    def rasterize(self, pc_r):
+        sap_raster = point_rasterize(pc_r[:, 0, ...], pc_r[:, 1, ...], self.shape)
+        return torch.moveaxis(sap_raster, 1, -1)
+
+    def forward(self, v_r, n_r):
+        pc_r = torch.stack([v_r, n_r], dim=1)
+        v_n = self.rasterize(pc_r)
+        v_k = torch.fft.rfftn(v_n, dim=self.fft_dims)
+        f_k = torch.sum(self.div * v_k, -1)
+        phi_n = torch.fft.irfftn(self.ilap * f_k, dim=self.fft_dims)
+        return phi_n
