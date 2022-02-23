@@ -25,10 +25,12 @@ def main():
         if res>cfg['model']['grid_res']:
             continue
 
-        psr_sigma= 2 if res<=128 else 3
+        # psr_sigma= 2 if res<=128 else 3
         
-        if res > 128:
-            psr_sigma = 5 if 'thingi_noisy' in args.config else 3
+        # if res > 128:
+        #     psr_sigma = 5 if 'thingi_noisy' in args.config else 3
+
+        psr_sigma = cfg['model']['psr_sigma']
 
         if args.object_id != -1:
             out_dir = os.path.join(cfg['train']['out_dir'], 'object_%02d'%args.object_id, 'res_%d'%res)
