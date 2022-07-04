@@ -131,7 +131,9 @@ def main():
         gt_verts, gt_faces = data['gt_mesh'].get_mesh_verts_faces(0)
         pts_gt, norms_gt = sample_points_from_meshes(data['gt_mesh'], 
                                     num_samples=500000, return_normals=True)
+        print(pts_gt.max(), pts_gt.min())
         pts_gt = (pts_gt + 1) / 2
+        print(pts_gt.max(), pts_gt.min())
         from src.dpsr import DPSR, DFTPSR
         dpsr_tmp = DFTPSR((cfg['model']['grid_res'],
                             cfg['model']['grid_res'], 

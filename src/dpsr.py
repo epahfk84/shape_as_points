@@ -89,6 +89,14 @@ def ilap_op(shape, spacings):
     return ilap
 
 
+def scale_and_shift(phi_n, pc_r):
+    phi_n -= torch.mean(grid_interp(phi_n.unsqueeze(-1), pc_r[:, 0, :, :]).squeeze(-1), dim=1)
+    dim = pc_r.shape[-1]
+    idx = (slice(None),) + (0,) * dim
+    phi_n = phi_n * 0.5 / torch.abs(phi_n[idx])
+    return phi_n
+
+
 class DFTPSR(nn.Module):
     def __init__(self, shape, sig, device="cuda"):
         super(DFTPSR, self).__init__()
@@ -109,4 +117,5 @@ class DFTPSR(nn.Module):
         v_k = torch.fft.rfftn(v_n, dim=self.fft_dims)
         f_k = torch.sum(self.div * v_k, -1)
         phi_n = torch.fft.irfftn(self.ilap * f_k, dim=self.fft_dims)
+        phi_n = scale_and_shift(phi_n, pc_r)
         return phi_n

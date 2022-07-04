@@ -4,7 +4,7 @@ import torch
 from torch.nn import functional as F
 import trimesh
 
-from src.dpsr import DPSR
+from src.dpsr import DPSR, DFTPSR
 from src.model import PSR2Mesh
 from src.utils import grid_interp, verts_on_largest_mesh,\
                     export_pointcloud, mc_from_psr, GaussianSmoothing
@@ -29,15 +29,22 @@ class Trainer(object):
         self.cfg = cfg
         self.psr2mesh = PSR2Mesh.apply
         self.data_type = cfg['data']['data_type']
+        self.temp = 0
 
         # initialize DPSR
         self.dpsr = DPSR(res=(cfg['model']['grid_res'], 
                             cfg['model']['grid_res'], 
                             cfg['model']['grid_res']), 
                         sig=cfg['model']['psr_sigma'])
+        self.dftpsr = DFTPSR(shape=(cfg['model']['grid_res'], 
+                            cfg['model']['grid_res'], 
+                            cfg['model']['grid_res']), 
+                        sig=cfg['model']['psr_sigma'])
         if torch.cuda.device_count() > 1:    
             self.dpsr = torch.nn.DataParallel(self.dpsr) # parallell DPSR
+            self.dftpsr = torch.nn.DataParallel(self.dftpsr) # parallell DPSR
         self.dpsr = self.dpsr.to(device)
+        self.dftpsr = self.dftpsr.to(device)
 
     def train_step(self, data, inputs, model, it):
         ''' Performs a training step.
@@ -110,8 +117,20 @@ class Trainer(object):
             normals = normals / normals.norm(dim=-1, keepdim=True)
 
         # DPSR to get grid
-        psr_grid = self.dpsr(points, normals).unsqueeze(1)
-        psr_grid = torch.tanh(psr_grid)
+        psr_grid = self.dpsr(points, normals).unsqueeze(1) + 0.5
+        psr_grid_dft = self.dftpsr(points, normals).unsqueeze(1) + 0.5
+        # # print(psr_grid.shape)
+        # if self.temp % 150 == 0:
+        #     from matplotlib import pyplot as plt
+        #     plt.imshow(psr_grid[0, 0, :, :, psr_grid.shape[-1]//2].detach().cpu())
+        #     plt.colorbar()
+        #     plt.figure()
+        #     plt.imshow(psr_grid_dft[0, 0, :, :, psr_grid_dft.shape[-1]//2].detach().cpu())
+        #     plt.colorbar()
+        #     plt.show()
+        self.temp += 1
+        # psr_grid = torch.tanh(psr_grid)
+        psr_grid = torch.tanh(psr_grid_dft)
 
         return psr_grid, points, normals
 
@@ -131,6 +150,10 @@ class Trainer(object):
         else:
             loss, _ = chamfer_distance(v, pts_gt)
 
+        # print(v.max(), v.min())
+        # print(pts_gt.max(), pts_gt.min())
+
+        # print(loss.item())
         return loss
     
     def compute_2d_loss(self, inputs, data, model):
